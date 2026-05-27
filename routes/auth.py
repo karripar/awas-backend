@@ -39,8 +39,7 @@ def register():
     
     except sqlite3.IntegrityError:
         close_db(db)
-        # VULNERABILITY: Username enumeration - tells attacker if username exists
-        return jsonify({'error': 'Username already exists'}), 409
+        return jsonify({'error': 'Registration failed'}), 409
     except Exception as e:
         close_db(db)
         return jsonify({'error': str(e)}), 500
@@ -58,22 +57,21 @@ def login():
     db = get_db()
     cursor = db.cursor()
     
-    # VULNERABILITY: SQL Injection possible here with direct string formatting
-    # This is intentional for the security project
+    # VULNERABILITY: SQL injection. This intentionally combines user input
+    # directly into the login query for the AWAS project demo.
     try:
-        cursor.execute(f"SELECT * FROM users WHERE username = '{username}'")
+        hashed_password = simple_hash(password)
+        query = (
+            f"SELECT * FROM users "
+            f"WHERE username = '{username}' "
+            f"AND password = '{hashed_password}'"
+        )
+        cursor.execute(query)
         user = cursor.fetchone()
         
         if not user:
             close_db(db)
-            # VULNERABILITY: Username enumeration
-            return jsonify({'error': 'Username not found'}), 401
-        
-        hashed_password = simple_hash(password)
-        if user['password'] != hashed_password:
-            close_db(db)
-            # VULNERABILITY: This tells attacker the password is wrong
-            return jsonify({'error': 'Incorrect password'}), 401
+            return jsonify({'error': 'Invalid username or password'}), 401
         
         close_db(db)
         

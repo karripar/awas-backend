@@ -3,14 +3,14 @@ Seed script to populate the database with test users and posts
 Run this after creating the database: python seed.py
 """
 
-from database import get_db, close_db
+from database import get_db, close_db, init_db
 from utils import simple_hash, generate_id
 import sqlite3
 
 SEED_DATA = {
     "users": [
         {
-            "username": "admin",
+            "username": "admin_7f3a91",
             "email": "admin@awas.local",
             "password": "admin123",
             "role": "admin",
@@ -39,6 +39,8 @@ SEED_DATA = {
 
 def seed_database():
     """Seed the database with test data"""
+    init_db()
+
     db = get_db()
     cursor = db.cursor()
 
@@ -91,7 +93,7 @@ def seed_database():
             "private": True,
         },
         {
-            "username": "admin",
+            "username": "admin_7f3a91",
             "title": "Review checklist",
             "text": "The report should mention the attack surface and the intended weak points.",
             "private": False,
@@ -117,13 +119,13 @@ def seed_database():
                         int(post["private"]),
                     ),
                 )
-                print(f"  ✓ Created post: {post['title']}")
+                print(f"  Created post: {post['title']}")
             except Exception as e:
-                print(f"  ✗ Failed to create post: {e}")
+                print(f"  Failed to create post: {e}")
 
     db.commit()
     close_db(db)
-    print("\n✓ Database seeding complete!")
+    print("\nDatabase seeding complete.")
 
 
 if __name__ == "__main__":

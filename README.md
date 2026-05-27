@@ -43,7 +43,7 @@ python seed.py
 
 This will create test users:
 
-- **admin** / admin123 (admin role)
+- **admin_7f3a91** / admin123 (admin role)
 - **joel** / demo123 (user role)
 - **samu** / demo123 (user role)
 - **karri** / demo123 (user role)
@@ -93,16 +93,16 @@ This application contains the following vulnerabilities for educational purposes
 - **Location**: `/api/login` and `/api/feed` endpoints
 - **Issue**: User input is directly concatenated into SQL queries without sanitization
 - **Exploitation**:
-  - Login: `' OR '1'='1`
+  - Login: `admin_7f3a91' --` as the username with any password
   - Search: `' OR 1=1 --`
 - **Impact**: Attackers can bypass authentication or retrieve hidden posts
 
-### 2. Username Enumeration
+### 2. Authentication Error Handling
 
 - **Location**: `/api/register` and `/api/login` endpoints
-- **Issue**: Different error messages reveal whether a username exists
-- **Exploitation**: Attackers can determine valid usernames by trying registration or login
-- **Impact**: Reduces the username search space for brute force attacks
+- **Current behavior**: Login failures now return a generic `Invalid username or password` error
+- **Current behavior**: Duplicate registration failures return a generic `Registration failed` error
+- **Purpose**: Username enumeration was removed from the intended vulnerability chain
 
 ### 3. Weak Session Management
 
@@ -158,7 +158,7 @@ CREATE TABLE posts (
 
 To test the application, use these credentials:
 
-- **Username**: `admin` / **Password**: `admin123` (admin user)
+- **Username**: `admin_7f3a91` / **Password**: `admin123` (admin user)
 - **Username**: `joel` / **Password**: `demo123` (regular user)
 - **Username**: `samu` / **Password**: `demo123` (regular user)
 - **Username**: `karri` / **Password**: `demo123` (regular user)

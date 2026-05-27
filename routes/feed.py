@@ -21,7 +21,7 @@ def get_feed():
                 SELECT p.*, u.username FROM posts p
                 JOIN users u ON p.user_id = u.user_id
                 WHERE (p.private = 0 OR p.user_id = '{user_id}')
-                AND (p.title LIKE '%{search}%' OR p.text LIKE '%{search}%')
+                AND p.title LIKE '%{search}%'
                 ORDER BY p.created_at DESC
             """
             cursor.execute(query)
@@ -33,7 +33,7 @@ def get_feed():
                 WHERE p.private = 0 OR p.user_id = ?
                 ORDER BY p.created_at DESC
             """
-            cursor.execute(query, [user_id] if user_id else [])
+            cursor.execute(query, [user_id])
         
         posts = cursor.fetchall()
         close_db(db)
