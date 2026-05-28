@@ -76,7 +76,9 @@ The server will start on `http://localhost:5000`
 ### Admin
 
 - `DELETE /api/admin/feed/delete` - Delete post
-  - Body: `{post_id, user_id}`
+  - Body: `{post_id, current_user_id}` or `{post_id, user_id}`
+  - Header: `X-User-ID: <user_id>`
+  - Allowed for: post owner or admin only
 - `DELETE /api/admin/user/delete` - Delete user
   - Body: `{user_id, current_user_id}`
 - `POST /api/admin/user/promote` - Promote user to admin

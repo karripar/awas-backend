@@ -98,6 +98,24 @@ def seed_database():
             "text": "The report should mention the attack surface and the intended weak points.",
             "private": True,
         },
+            {
+                "username": "karri",
+                "title": "Public announcement",
+                "text": "This is a public post that anyone can see.",
+                "private": False,
+            },
+            {
+                "username": "joel",
+                "title": "Demo feedback",
+                "text": "The demo was well-structured and covered the key points.",
+                "private": False,
+            },
+                {
+                    "username": "samu",
+                    "title": "Security tips",
+                    "text": "Always use strong passwords and enable 2FA.",
+                    "private": False,
+                },
     ]
 
     print("\nSeeding database with test posts...")

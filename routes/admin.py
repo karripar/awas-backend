@@ -5,29 +5,40 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 @admin_bp.route('/feed/delete', methods=['DELETE'])
 def delete_post():
-    """Delete a post - ADMIN ONLY"""
-    data = request.get_json()
+    """Delete a post - admins or post owners only"""
+    data = request.get_json(silent=True) or {}
     post_id = data.get('post_id')
-    user_id = data.get('user_id')
-    
-    if not post_id or not user_id:
+    current_user_id = data.get('current_user_id') or data.get('user_id') or request.headers.get('X-User-ID', '').strip()
+
+    if not post_id or not current_user_id:
         return jsonify({'error': 'Missing fields'}), 400
     
     db = get_db()
     cursor = db.cursor()
     
     try:
-        # VULNERABILITY: No proper authorization check - relies on frontend validation
-        # Any user who knows a post_id and provides user_id can delete
+        cursor.execute('SELECT user_id, role FROM users WHERE user_id = ?', (current_user_id,))
+        current_user = cursor.fetchone()
+        if not current_user:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        cursor.execute('SELECT user_id FROM posts WHERE post_id = ?', (post_id,))
+        post = cursor.fetchone()
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+
+        if current_user['role'] != 'admin' and post['user_id'] != current_user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
         cursor.execute('DELETE FROM posts WHERE post_id = ?', (post_id,))
         db.commit()
-        close_db(db)
         
         return jsonify({'message': 'Post deleted successfully'}), 200
     
     except Exception as e:
-        close_db(db)
         return jsonify({'error': str(e)}), 500
+    finally:
+        close_db(db)
 
 
 @admin_bp.route('/users', methods=['GET'])
