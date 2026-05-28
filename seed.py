@@ -96,7 +96,7 @@ def seed_database():
             "username": "admin_7f3a91",
             "title": "Review checklist",
             "text": "The report should mention the attack surface and the intended weak points.",
-            "private": False,
+            "private": True,
         },
     ]
 
