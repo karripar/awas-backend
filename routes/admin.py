@@ -82,3 +82,72 @@ def delete_user():
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/user/promote', methods=['POST'])
+def promote_user():
+    """Promote a user to admin"""
+    data = request.get_json()
+    user_id_to_promote = data.get('user_id')
+    current_user_id = data.get('current_user_id')
+    
+    if not user_id_to_promote or not current_user_id:
+        return jsonify({'error': 'Missing fields'}), 400
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        cursor.execute('SELECT role FROM users WHERE user_id = ?', (user_id_to_promote,))
+        target_user = cursor.fetchone()
+        if not target_user:
+            close_db(db)
+            return jsonify({'error': 'User not found'}), 404
+        
+        if target_user['role'] == 'admin':
+            close_db(db)
+            return jsonify({'message': 'User is already an admin'}), 200
+        
+        cursor.execute('UPDATE users SET role = ? WHERE user_id = ?', ('admin', user_id_to_promote))
+        db.commit()
+        close_db(db)
+        
+        return jsonify({'message': 'User promoted to admin successfully'}), 200
+    
+    except Exception as e:
+        close_db(db)
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/user/demote', methods=['POST'])
+def demote_user():
+    """Demote a user from admin"""
+    data = request.get_json()
+    user_id_to_demote = data.get('user_id')
+    current_user_id = data.get('current_user_id')
+    
+    if not user_id_to_demote or not current_user_id:
+        return jsonify({'error': 'Missing fields'}), 400
+    
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        cursor.execute('SELECT role FROM users WHERE user_id = ?', (user_id_to_demote,))
+        target_user = cursor.fetchone()
+        if not target_user:
+            close_db(db)
+            return jsonify({'error': 'User not found'}), 404
+        
+        if target_user['role'] != 'admin':
+            close_db(db)
+            return jsonify({'message': 'User is not an admin'}), 200
+        
+        cursor.execute('UPDATE users SET role = ? WHERE user_id = ?', ('user', user_id_to_demote))
+        db.commit()
+        close_db(db)
+        
+        return jsonify({'message': 'User demoted from admin successfully'}), 200
+    
+    except Exception as e:
+        close_db(db)
+        return jsonify({'error': str(e)}), 500
+
