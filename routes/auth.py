@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 import sqlite3
 from database import get_db, close_db
 from utils import simple_hash, generate_id
+import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api')
 
@@ -60,25 +61,47 @@ def login():
     # VULNERABILITY: SQL injection. This intentionally combines user input
     # directly into the login query for the AWAS project demo.
     try:
-        hashed_password = simple_hash(password)
-        query = (
-            f"SELECT * FROM users "
-            f"WHERE username = '{username}' "
-            f"AND password = '{hashed_password}'"
-        )
-        cursor.execute(query)
+        # Basic username validation: reject obviously malicious formats so that
+        # attackers cannot use SQL meta-characters in the username field.
+        if not re.match(r'^[A-Za-z0-9_.-]+$', username):
+            close_db(db)
+            return jsonify({'error': 'Invalid username format'}), 400
+
+        # First, look up the username safely to prevent username-based SQLi
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
-        
+
         if not user:
             close_db(db)
             return jsonify({'error': 'Invalid username or password'}), 401
-        
+
+        # Normal safe path: check hashed password
+        hashed_password = simple_hash(password)
+        if hashed_password == user['password']:
+            close_db(db)
+            # VULNERABILITY: Weak token - just user_id, TODO: make it more complex
+            session_token = user['user_id']
+            return jsonify({
+                'message': 'Login successful',
+                'user_id': user['user_id'],
+                'username': user['username'],
+                'role': user['role'],
+                'session_token': session_token
+            }), 200
+
+        # Fallback (intentionally vulnerable): allow SQL injection via the password field
+        # This concatenates the raw password into SQL, but the username is parameterized,
+        # so an attacker must know a valid username to exploit this.
+        vuln_query = f"SELECT * FROM users WHERE username = ? AND password = '{password}'"
+        cursor.execute(vuln_query, (username,))
+        user = cursor.fetchone()
+
+        if not user:
+            close_db(db)
+            return jsonify({'error': 'Invalid username or password'}), 401
+
         close_db(db)
-        
-        # Create a simple session token
-        # VULNERABILITY: Weak token - just user_id, TODOO: make it a bit more complex 
         session_token = user['user_id']
-        
         return jsonify({
             'message': 'Login successful',
             'user_id': user['user_id'],
