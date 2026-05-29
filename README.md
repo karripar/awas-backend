@@ -64,27 +64,32 @@ The server will start on `http://localhost:5000`
   - Body: `{username, email, password}`
 - `POST /api/login` - Login user
   - Body: `{username, password}`
+- `GET /api/session` - Get the current authenticated user from the session cookie
 - `POST /api/logout` - Logout user
 
 ### Feed
 
 - `GET /api/feed` - Get feed posts (supports ?search= parameter)
-  - Header: `X-User-ID: <user_id>`
+  - Requires the session cookie
 - `POST /api/feed` - Create new post
-  - Body: `{user_id, title, text, private}`
+  - Body: `{title, text, private}`
+  - Requires the session cookie
 
 ### Admin
 
 - `DELETE /api/admin/feed/delete` - Delete post
-  - Body: `{post_id, current_user_id}` or `{post_id, user_id}`
-  - Header: `X-User-ID: <user_id>`
+  - Body: `{post_id}`
+  - Requires the session cookie
   - Allowed for: post owner or admin only
 - `DELETE /api/admin/user/delete` - Delete user
-  - Body: `{user_id, current_user_id}`
+  - Body: `{user_id}`
+  - Requires an admin session cookie
 - `POST /api/admin/user/promote` - Promote user to admin
-  - Body: `{user_id, current_user_id}`
+  - Body: `{user_id}`
+  - Requires an admin session cookie
 - `POST /api/admin/user/demote` - Demote user from admin
-  - Body: `{user_id, current_user_id}`
+  - Body: `{user_id}`
+  - Requires an admin session cookie
 
 ## Intentional Vulnerabilities
 
@@ -108,10 +113,9 @@ This application contains the following vulnerabilities for educational purposes
 
 ### 3. Weak Session Management
 
-- **Location**: All endpoints
-- **Issue**: Session token is simply the user_id; stored in localStorage on frontend
-- **Exploitation**: Attackers can modify localStorage to impersonate any user
-- **Impact**: Complete account hijacking without credential theft
+- **Location**: All authenticated endpoints
+- **Issue**: The app now uses an HttpOnly, secure session cookie instead of localStorage
+- **Impact**: The browser can no longer modify session state directly
 
 ### 4. Broken Access Control
 
@@ -174,7 +178,7 @@ The React frontend at `../awas-frontend` is now configured to connect to this ba
 1. Backend: `python app.py` (port 5000)
 2. Frontend: `npm run dev` (typically port 5173)
 
-The frontend will automatically make API calls to `http://localhost:5000/api` for all operations.
+The frontend will automatically make API calls to `http://localhost:5000/api` for all operations and sends credentials with each request.
 
 ## Notes
 

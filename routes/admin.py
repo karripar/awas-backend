@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from database import get_db, close_db
+from .session_utils import get_current_user
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -8,7 +9,8 @@ def delete_post():
     """Delete a post - admins or post owners only"""
     data = request.get_json(silent=True) or {}
     post_id = data.get('post_id')
-    current_user_id = data.get('current_user_id') or data.get('user_id') or request.headers.get('X-User-ID', '').strip()
+    current_user = get_current_user()
+    current_user_id = current_user['user_id'] if current_user else ''
 
     if not post_id or not current_user_id:
         return jsonify({'error': 'Missing fields'}), 400
@@ -44,6 +46,13 @@ def delete_post():
 @admin_bp.route('/users', methods=['GET'])
 def list_users():
     """List users (ADMIN view)"""
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if current_user['role'] != 'admin':
+        return jsonify({'error': 'Forbidden'}), 403
+
     db = get_db()
     cursor = db.cursor()
     try:
@@ -61,7 +70,8 @@ def delete_user():
     """Delete a user - ADMIN ONLY"""
     data = request.get_json()
     user_id_to_delete = data.get('user_id')
-    current_user_id = data.get('current_user_id')
+    current_user = get_current_user()
+    current_user_id = current_user['user_id'] if current_user else ''
     
     if not user_id_to_delete or not current_user_id:
         return jsonify({'error': 'Missing fields'}), 400
@@ -70,7 +80,10 @@ def delete_user():
     cursor = db.cursor()
     
     try:
-        # VULNERABILITY: No role verification - relies on frontend validation only
+        if not current_user or current_user['role'] != 'admin':
+            close_db(db)
+            return jsonify({'error': 'Forbidden'}), 403
+
         cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id_to_delete,))
         db.commit()
         close_db(db)
@@ -87,7 +100,8 @@ def promote_user():
     """Promote a user to admin"""
     data = request.get_json()
     user_id_to_promote = data.get('user_id')
-    current_user_id = data.get('current_user_id')
+    current_user = get_current_user()
+    current_user_id = current_user['user_id'] if current_user else ''
     
     if not user_id_to_promote or not current_user_id:
         return jsonify({'error': 'Missing fields'}), 400
@@ -96,6 +110,10 @@ def promote_user():
     cursor = db.cursor()
     
     try:
+        if not current_user or current_user['role'] != 'admin':
+            close_db(db)
+            return jsonify({'error': 'Forbidden'}), 403
+
         cursor.execute('SELECT role FROM users WHERE user_id = ?', (user_id_to_promote,))
         target_user = cursor.fetchone()
         if not target_user:
@@ -122,7 +140,8 @@ def demote_user():
     """Demote a user from admin"""
     data = request.get_json()
     user_id_to_demote = data.get('user_id')
-    current_user_id = data.get('current_user_id')
+    current_user = get_current_user()
+    current_user_id = current_user['user_id'] if current_user else ''
     
     if not user_id_to_demote or not current_user_id:
         return jsonify({'error': 'Missing fields'}), 400
@@ -131,6 +150,10 @@ def demote_user():
     cursor = db.cursor()
     
     try:
+        if not current_user or current_user['role'] != 'admin':
+            close_db(db)
+            return jsonify({'error': 'Forbidden'}), 403
+
         cursor.execute('SELECT role FROM users WHERE user_id = ?', (user_id_to_demote,))
         target_user = cursor.fetchone()
         if not target_user:

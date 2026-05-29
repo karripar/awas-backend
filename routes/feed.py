@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from database import get_db, close_db
 from utils import generate_id
+from .session_utils import get_current_user
 
 feed_bp = Blueprint('feed', __name__, url_prefix='/api')
 
@@ -8,7 +9,8 @@ feed_bp = Blueprint('feed', __name__, url_prefix='/api')
 def get_feed():
     """Get feed posts - supports search"""
     search = request.args.get('search', '').strip()
-    user_id = request.headers.get('X-User-ID', '').strip()
+    current_user = get_current_user()
+    user_id = current_user['user_id'] if current_user else ''
     
     db = get_db()
     cursor = db.cursor()
@@ -49,7 +51,8 @@ def get_feed():
 def create_post():
     """Create a new post"""
     data = request.get_json()
-    user_id = data.get('user_id')
+    current_user = get_current_user()
+    user_id = current_user['user_id'] if current_user else None
     title = data.get('title', '').strip()
     text = data.get('text', '').strip()
     private = data.get('private', False)
@@ -84,7 +87,8 @@ def create_post():
 def update_post(post_id):
     """Update a post - admins or post owners only"""
     data = request.get_json(silent=True) or {}
-    current_user_id = data.get('user_id') or request.headers.get('X-User-ID', '').strip()
+    current_user = get_current_user()
+    current_user_id = current_user['user_id'] if current_user else ''
     title = data.get('title', '').strip()
     text = data.get('text', '').strip()
     private = data.get('private', False)

@@ -1,7 +1,8 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 import sqlite3
 from database import get_db, close_db
 from utils import simple_hash, generate_id
+from .session_utils import get_current_user
 import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api')
@@ -28,6 +29,9 @@ def register():
             INSERT INTO users (user_id, username, email, password, role)
             VALUES (?, ?, ?, ?, 'user')
         ''', (user_id, username, email, hashed_password))
+
+        session.clear()
+        session['user_id'] = user_id
         
         db.commit()
         close_db(db)
@@ -35,7 +39,8 @@ def register():
         return jsonify({
             'message': 'User registered successfully',
             'user_id': user_id,
-            'username': username
+            'username': username,
+            'role': 'user'
         }), 201
     
     except sqlite3.IntegrityError:
@@ -78,15 +83,14 @@ def login():
         # Normal safe path: check hashed password
         hashed_password = simple_hash(password)
         if hashed_password == user['password']:
+            session.clear()
+            session['user_id'] = user['user_id']
             close_db(db)
-            # VULNERABILITY: Weak token - just user_id, TODO: make it more complex
-            session_token = user['user_id']
             return jsonify({
                 'message': 'Login successful',
                 'user_id': user['user_id'],
                 'username': user['username'],
                 'role': user['role'],
-                'session_token': session_token
             }), 200
 
         # Fallback (intentionally vulnerable): allow SQL injection via the password field
@@ -100,23 +104,36 @@ def login():
             close_db(db)
             return jsonify({'error': 'Invalid username or password'}), 401
 
+        session.clear()
+        session['user_id'] = user['user_id']
         close_db(db)
-        session_token = user['user_id']
         return jsonify({
             'message': 'Login successful',
             'user_id': user['user_id'],
             'username': user['username'],
             'role': user['role'],
-            'session_token': session_token
         }), 200
     
     except Exception as e:
         close_db(db)
         return jsonify({'error': str(e)}), 500
 
+@auth_bp.route('/session', methods=['GET'])
+def current_session():
+    """Return the current authenticated user from the session cookie."""
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({'user': None}), 200
+
+    return jsonify({
+        'user_id': current_user['user_id'],
+        'username': current_user['username'],
+        'role': current_user['role'],
+        'email': current_user['email'],
+    }), 200
+
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Logout user"""
-    # VULNERABILITY: No real session management
-    # TODOO: add better vulnerability here
+    session.clear()
     return jsonify({'message': 'Logged out successfully'}), 200
