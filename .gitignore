@@ -40,3 +40,5 @@ wheels/
 awas.db
 awas.db-wal
 awas.db-shm
+
+dump.sql
