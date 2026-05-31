@@ -78,7 +78,7 @@ def login():
 
         if not user:
             close_db(db)
-            return jsonify({'error': 'Invalid username or password'}), 401
+            return jsonify({'error': 'Invalid username'}), 404
 
         # Normal safe path: check hashed password
         hashed_password = simple_hash(password)
@@ -98,9 +98,7 @@ def login():
         # so an attacker must know a valid username to exploit this.
         vuln_query = f"SELECT * FROM users WHERE username = ? AND password = '{password}'"
         cursor.execute(vuln_query, (username,))
-        user = cursor.fetchone()
-
-        if not user:
+        if not cursor.fetchone():
             close_db(db)
             return jsonify({'error': 'Invalid username or password'}), 401
 
